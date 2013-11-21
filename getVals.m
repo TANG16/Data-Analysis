@@ -1,8 +1,11 @@
 function arraysFieldsVals = getVals(array,field,firstIndex,lastIndex)
-% gets value of field 'field' in elements between firstIndex and lastIndex,
-% inclusive, of array 'array'.  Works for cell or struct arrays.
+% GETVALS returns an array of all the values in a field of an array between
+%   two indices
 %
-% LIMITATIONS: only works if field values are a scalar
+% Returns an array of the values of field 'field' in elements between 
+% firstIndex and lastIndex, inclusive, of array 'array'.  Works for cell or 
+% struct arrays.  VALUES MUST BE SCALAR.  If firstIndex and lastIndex are
+% not specified, the function uses the whole array.
 
 
 if(nargin==2)

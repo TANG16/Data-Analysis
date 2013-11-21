@@ -1,4 +1,6 @@
-% run this script after creating heatPulses
+% this little example script gets the last conductance in each heat pulse
+% in heatPulses and puts them in an array lastCondBefore.  Run this script 
+% after creating heatPulses
 
 condsBefore={};
 

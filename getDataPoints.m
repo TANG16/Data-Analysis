@@ -1,7 +1,7 @@
 function dataPoints = getDataPoints(filename, filetype)
 % The data points are represented by a struct array.  Of the built-in
 % classes, the data in a struct array is accessable in a way which is
-% closest to the way it needs to be.  The total necessary memory for
+% closest to the way Willi wants it to be.  The total necessary memory for
 % a struct array can be allocated once, as opposed to the case of an array
 % of instances of user-defined classes, which dramatically speeds up 
 % instantiation time.  The downside to representing the data points as a 
@@ -22,12 +22,20 @@ function dataPoints = getDataPoints(filename, filetype)
 % is that accessing an individual data point's field's value is less 
 % straightforward than for a struct array.
 %
-% filename: file to read from
-% filetype:
-%   'dc': dc file
-%   'iVg2dc': dc file converted from iVg
-%   'iVg': iVg file
-
+% NOTE: You may get the following error:
+%
+% ??? Error using ==> cell2struct
+% Number of field names must match number of fields in new structure.
+% 
+% Error in ==> getDataPoints at 88
+%     dataPoints=cell2struct(num2cell([rawdata
+%     zeros(length(rawdata),1)]),[sortedVars
+%     'smoothedConductance'],2);
+% 
+% This happens if the header has above a certain number of characters.  To
+% get around this, copy the file, delete everything between
+% #begin-data-header and #end-data-header, and run this function on the new
+% file.
 
 if(strcmpi(filetype,'dc') || strcmpi(filetype,'iVg2dc'))
     [importeddata,~,~] = importdata(filename);
@@ -110,7 +118,7 @@ if(strcmpi(filetype,'dc') || strcmpi(filetype,'iVg2dc'))
         % [conductances{:}]=dataPoints(:).conductance;
         % conductancesMat=cell2mat(conductances);
         
-        conductances=getVals(dataPoints,'conductance');
+        conductances=getVals(dataPoints,'conductance')
         
         conductancesMedFilt=medfilt1(conductances);
         conductancesMedFiltRunningAvg=filter(ones(1,5)/5,1,conductancesMedFilt);
