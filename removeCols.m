@@ -1,9 +1,12 @@
 function [] = removeCols( existingFileName, colsToKeep )
-%REMOVECOLS Summary of this function goes here
-%   Detailed explanation goes here
+%REMOVECOLS creates a file with some columns of the original file removed
+%   If existing file is named file.txt, created a file called
+%   file_cols_removed.txt with only the columns colsToKeep of file.txt
 
+    % sort colsToKeep
     colsToKeep=sort(colsToKeep);
 
+    % we must keep the time column
     if(colsToKeep(1)~=0)
         colsToKeep = [0 colsToKeep];
     end
@@ -14,6 +17,7 @@ function [] = removeCols( existingFileName, colsToKeep )
     
     createdFileID=fopen(fullfile(pathstr,[name '_cols_removed' ext]),'w');
     
+    % copy everything up to column information
     while true
         lineOfExistingFile=fgetl(existingFileID);
         
@@ -24,6 +28,9 @@ function [] = removeCols( existingFileName, colsToKeep )
         end
     end
     
+    % write column info to created file.  This is same as original column
+    % info, but only columns we keep are in it and column numbers need to
+    % therefore be renamed.
     iCol=1;
     iColsKept=0;
     iColsRemoved=0;
@@ -54,6 +61,7 @@ function [] = removeCols( existingFileName, colsToKeep )
         end
     end
     
+    % write everything between header and data to created file
     while true
         lineOfExistingFile=fgetl(existingFileID);
         
@@ -64,8 +72,8 @@ function [] = removeCols( existingFileName, colsToKeep )
         end
     end
 
+    % write only columns to keep to created file
     pat=strcat(repmat('(\S+\t)',1,numColsOrig),'(\S+)');
-    
     while true
         lineOfExistingFile=fgetl(existingFileID);
         

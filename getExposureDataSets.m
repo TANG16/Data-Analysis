@@ -1,4 +1,19 @@
 function exposureDataSets = getExposureDataSets(arg,windowBefore,windowAfter)
+% GETEXPOSUREDATASETS get all gas exposures in a set of data points
+% 
+% INPUTS
+%   arg: data points or zephyr data file (assumes is dc)
+%   windowBefore: how many milliseconds before each exposure to get
+%   (defaults to 60000)
+%   windowAtter: how many milliseconds before each exposure to get
+%   (defaults to 60000)
+% 
+% OUTPUTS
+%   exposureDataSets: exposures
+%
+% NOTE: This function will be made deprecated by getDataSets once I get
+% that working with plotExposureData
+
 if(ischar(arg))
     dataPoints=getDataPoints(arg,'dc');
 else
@@ -15,14 +30,19 @@ end
 CLOSED_STREAM_SELECT_VAL = 2;
 OPEN_STREAM_SELECT_VAL = 1;
 
+%------------------------------------------------------------------------%
+%-------------------------loop over data points--------------------------%
+%------------------------------------------------------------------------%
 firstTime=dataPoints(1).time;
 lastTime=dataPoints(end).time;
-
 numDataPoints=length(dataPoints);
 exposureDataSets=[];
 i=1;
 while i<=numDataPoints
+    %---------------------if exposure has begun--------------------------%
     if(dataPoints(i).streamSelect == OPEN_STREAM_SELECT_VAL)
+        % find first data point after windowSize seconds before the start
+        % of exposure
         targetH2SConc=dataPoints(i).targetConc1_H2S;
         streamOpeningIndex=i;
         streamOpeningTime=dataPoints(i).time;
@@ -37,6 +57,8 @@ while i<=numDataPoints
         else
             initialDataPointIndexOfInterest=1;
         end
+        % find last data point before windowSize seconds after end of
+        % exposure
         for j=i:1:numDataPoints
             if(dataPoints(j).streamSelect == CLOSED_STREAM_SELECT_VAL)
                 streamClosingIndex=j;
@@ -60,6 +82,9 @@ while i<=numDataPoints
             streamClosingIndex=numDataPoints+1;
             finalDataPointIndexOfInterest=numDataPoints;
         end
+        % put data points before, during, and after exposure and lots of
+        % other pertinent data into a struct and add it to
+        % exposureDataSets
 %         exposuresData=dataPoints(initialDataPointIndexOfInterest:finalDataPointIndexofInterest);
 %         
 %         exposuresTimes=cell(size(exposuresData));

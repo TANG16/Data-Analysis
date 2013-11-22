@@ -1,26 +1,49 @@
 function dataSets = getDataSets(arg,mode,windowSize,mode_arg1,mode_arg2)
-% THIS CODE CURRENTLY DOESN'T WORK WITH PLOTHEATPULSEDATA (though it
-% wouldn't be so hard to get it work) so use getHeatPulseDataSets instead
+% GETDATASETS get data sets from data points satisfying certain conditions.
+%   This code works, but CURRENTLY DOESN'T WORK WITH PLOTHEATPULSEDATA.
 % 
-% arg: data points structure or zephyr data file
+% INPUTS
+% arg: data points structure or zephyr data file (assumes is dc file)
 % windowSize: each data set in dataSets contains data points from
 %   windowSize seconds "before" and "after" data set
-% modes:
+% mode:
 %   heat pulses:
 %       dataSets is all heat pulses
 %       default windowSize is 1 second
 %       mode_arg1 and mode_arg2 are not used
-%   gas concentration
+%   gas concentration:
 %       whenever the gas concentration of gas mode_arg1 on stream mode_arg2
-%       changes or stream_select changes
+%       changes or stream_select changes, that's a new data set
 %       default windowSize is 60 seconds
+%   first data points:
+%       dataSets is one data set, which is all data points in first
+%       mode_arg1 minutes
+%       default windowSize is 0
+%   last data points:
+%       dataSets is one data set, which is all data points after first
+%       mode_arg1 minutes
+%       default windowSize is 0
+%   humidity:
+%       new data set is created whenever target humidity changes
+%       default windowSize is 60 seconds
+% mode_arg1, mode_arg2: see "mode" explanation
+% 
+% OUTPUT
+% dataSets: data sets
+% 
+%
+% NOTE: THIS CODE CURRENTLY DOESN'T WORK WITH PLOTHEATPULSEDATA or 
+% PLOTEXPOSUREDATA
+
 if(ischar(arg))
-    test=getDataPoints(arg,'dc');
-    dataPoints=test.dataPointsDuring;
+    dataPoints=getDataPoints(arg,'dc');
 else
-    dataPoints=arg.dataPointsDuring;
+    dataPoints=arg;
 end
 
+% depending on mode (see explanation in function description), choose 
+% windowSize (if not specified), condition_i, and condition_j, which are
+% used when parsing out data sets later
 switch mode
     case 'heat pulses'
         EPS = .003;
@@ -68,11 +91,11 @@ switch mode
         
         condition_i='(i==1) || (dataPoints(i).targetRH ~= dataPoints(i-1).targetRH)';
         condition_j='(dataPoints(j).targetRH ~= dataPoints(j-1).targetRH)';
-        field1name='targetRH';
-        field1='dataPoints(fieldChangingIndex).targetRH';
-
+%         field1name='targetRH';
+%         field1='dataPoints(fieldChangingIndex).targetRH';
 end
 
+% run getDataSetsHelper to get data sets
 dataSets = getDataSetsHelper(dataPoints,condition_i,condition_j,windowSize*1000,field1name,field1);
 
 end
@@ -85,8 +108,14 @@ numDataPoints=length(dataPoints);
 dataSets=[];
 i=1;
 
+%------------------------------------------------------------------------%
+%-------------------------loop over data points--------------------------%
+%------------------------------------------------------------------------%
 while i<=numDataPoints
+    %---------------------if data set has begun--------------------------%
     if(eval(condition_i))
+        % find first data point after windowSize seconds before the start
+        % of data set
         fieldChangingIndex=i;
         fieldChangingTime=dataPoints(i).time;
         if(fieldChangingTime-windowSize>firstTime)
@@ -100,6 +129,9 @@ while i<=numDataPoints
         else
             initialDataPointIndexOfInterest=1;
         end
+        
+        % find last data point before windowSize seconds after end of data
+        % set
         for j=i+1:1:numDataPoints
 %             if(getfield(dataPoints(j),field) ~= ithDataPointsFieldVal)
             if(eval(condition_j))
@@ -124,18 +156,19 @@ while i<=numDataPoints
             fieldAgainChangingIndex=numDataPoints+1;
             finalDataPointIndexOfInterest=numDataPoints;
         end
-           
+
+        % put data points before, during, and after exposure, and exposure 
+        % starting time into struct arry, then add it to the dataSets array
         tmp = struct('dataPointsBefore',dataPoints(initialDataPointIndexOfInterest:fieldChangingIndex-1),...
             'dataPointsDuring',dataPoints(fieldChangingIndex:fieldAgainChangingIndex-1),...
             'dataPointsAfter',dataPoints(fieldAgainChangingIndex:finalDataPointIndexOfInterest));
-        
         tmp.startingTime=dataPoints(fieldChangingIndex).time;
-        if(exist('field1name'))
-            tmp.(field1name)=eval(field1);
-        end
-        
+%         if(exist('field1name'))
+%             tmp.(field1name)=eval(field1);
+%         end
         dataSets=[dataSets tmp];
 
+        % continue loop at end of data set
         i = fieldAgainChangingIndex-1;
     end
     i=i+1;

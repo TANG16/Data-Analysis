@@ -1,6 +1,7 @@
 function heatPulseDataSets = getHeatPulseDataSets(arg,pulse_v,v_btw_pulses,windowBefore,windowAfter)
 % GETHEATPULSEDATASETS groups dataPoints into heatPulses
 % 
+% INPUTS
 % arg: can be either the file to get heat pulses from (assumes file is 
 %    dc-type) or the dataPoints
 % 
@@ -8,12 +9,23 @@ function heatPulseDataSets = getHeatPulseDataSets(arg,pulse_v,v_btw_pulses,windo
 % 
 % v_btw_pulses: voltage between heat pulses (defaults to 0)
 % 
-% windowBefore: milliseconds before heat pulse to put into heat pulse (defaults
-%   to 60000)
+% windowBefore: milliseconds before heat pulse to put into heat pulse 
+%   (defaults to 60000)
 % 
 % windowAfter: milliseconds after heat pulse to put into heat pulse
-%   (defaults to 60000)
+%   (if windowBefore is specified, defaults to windowBefore.  Otherwise, 
+%   defaults to 60000)
+% 
+% OUTPUTS
+% heatPulseDataSets: heatPulses
+%
+% NOTE: This function will be made deprecated by getDataSets once I get
+% that working with plotHeatPulseData
+%
+% To Do: get rid of pulse_v and v_btw_pulses and know that it's the
+% beginning and end of the heat pulse by the voltage changing.
 
+EPS=0.003
 
 if(ischar(arg))
     dataPoints=getDataPoints(arg,'dc');
@@ -32,14 +44,19 @@ elseif(nargin==4)
     windowAfter=windowBefore;
 end
 
+%------------------------------------------------------------------------%
+%-------------------------loop over data points--------------------------%
+%------------------------------------------------------------------------%
 firstTime=dataPoints(1).time;
 lastTime=dataPoints(end).time;
-
 numDataPoints=length(dataPoints);
 heatPulseDataSets=[];
 i=1;
 while i<=numDataPoints
-    if((dataPoints(i).heater_voltage > pulse_v-.003) && (dataPoints(i).heater_voltage < pulse_v+.003))
+    %-------if heat pulse has begun (wiggle room of EPS)--------------%
+    if((dataPoints(i).heater_voltage > pulse_v-EPS) && (dataPoints(i).heater_voltage < pulse_v+EPS))
+        % find first data point after windowSize seconds before the start
+        % of heat pulse
 %         targetH2SConc=dataPoints(i).targetConc1_H2S;
         pulseStartingIndex=i;
         pulseStartingTime=dataPoints(i).time;
@@ -54,8 +71,10 @@ while i<=numDataPoints
         else
             initialDataPointIndexOfInterest=1;
         end
+        % find last data point before windowSize seconds after end of heat
+        % pulse
         for j=i:1:numDataPoints
-            if((dataPoints(j).heater_voltage > v_btw_pulses-.003) && (dataPoints(j).heater_voltage < v_btw_pulses+.003))
+            if((dataPoints(j).heater_voltage > v_btw_pulses-EPS) && (dataPoints(j).heater_voltage < v_btw_pulses+EPS))
                 pulseEndedIndex=j;
                 pulseEndedTime=dataPoints(j).time;
                 if(pulseEndedTime+windowAfter<lastTime)
@@ -77,6 +96,10 @@ while i<=numDataPoints
             pulseEndedIndex=numDataPoints+1;
             finalDataPointIndexOfInterest=numDataPoints;
         end
+        
+        % put data points before, during, and after exposure and lots of
+        % other pertinent data into a struct and add it to the heatPulses 
+        % array        
 %         exposuresData=dataPoints(initialDataPointIndexOfInterest:finalDataPointIndexofInterest);
 %         
 %         exposuresTimes=cell(size(exposuresData));
@@ -137,7 +160,6 @@ while i<=numDataPoints
         
         avgMedFiltConductanceDuringHeatPulse=mean(getVals(dataPoints,'medFiltConductance',pulseStartingIndex,pulseEndedIndex-1));
         medMedFiltConductanceDuringHeatPulse=median(getVals(dataPoints,'medFiltConductance',pulseStartingIndex,pulseEndedIndex-1));
-        
         targetH2SConc=dataPoints(pulseStartingIndex).targetConc1_H2S;
         targetRH=dataPoints(pulseStartingIndex).targetRH;
         if(isfield(dataPoints,'H2S'))
@@ -185,6 +207,7 @@ while i<=numDataPoints
 %                 'avgConductanceAfterHeatPulse', avgConductanceAfterHeatPulse,...
         end
         
+        % continue loop at end of pulse
         i = pulseEndedIndex;
         
         
